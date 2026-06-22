@@ -1,0 +1,41 @@
+name: Sync landing page
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/sync-landing.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout NivelTI repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fetch landing source
+        run: |
+          rm -rf /tmp/gbr-source
+          git clone --depth 1 --branch codex/landing-page-gbr https://github.com/stwartelearte/gbrdesenvolvimento.git /tmp/gbr-source
+
+      - name: Copy landing files
+        run: |
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.github/workflows/sync-landing.yml' \
+            /tmp/gbr-source/ ./
+
+      - name: Commit landing files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Publish GBR landing page" || exit 0
+          git push
